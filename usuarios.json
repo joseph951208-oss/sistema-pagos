@@ -1,0 +1,10 @@
+{
+    "lector": {
+        "password_hash": "scrypt:32768:8:1$eyoYZLWfIbgFkU5d$707ad37ae947d1f8356d5b484d50d4703e039bb9013b18120532d5b559b05f130ea2a80811a6443a2a5859a4f81f505d8d0ffec4df3a818be51c081f2238e535",
+        "role": "reader"
+    },
+    "supersu": {
+        "password_hash": "scrypt:32768:8:1$IjXel3equKkfRe89$a393aa50fd2e718f7e197ebd12b5bfa73f5d69586d62c961abb9e7ca8f2f899e21e664cd800deaa14460c672c2f0b06877ed0f9ed3587acb93079ef4739961f1",
+        "role": "admin"
+    }
+}

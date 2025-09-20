@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registrar Pago</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">💰 Sistema de Pagos</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        {% if user_role in ['admin', 'supersu'] %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('upload_files') }}">Subir Archivos</a>
+          </li>
+        {% endif %}
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="{{ url_for('registro_pago') }}">Registrar Pago</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('registro_cliente') }}">Registrar Cliente</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('consulta') }}">Consulta de Pagos</a>
+        </li>
+      </ul>
+      <span class="navbar-text me-3">
+        Usuario: {{ session['username'] }}
+      </span>
+      <a class="btn btn-danger" href="{{ url_for('logout') }}">Cerrar sesión</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-3">
+    <h2>💰 Registrar Pago</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <form method="POST">
+        <!-- Selección de Cliente -->
+        <div class="mb-3">
+            <label for="cliente" class="form-label">Cliente</label>
+            <select name="cliente" id="cliente" class="form-control" required>
+                <option value="">-- Selecciona un cliente --</option>
+                {% for c in clientes %}
+                    <option value="{{ c }}">{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Fecha de pago -->
+        <div class="mb-3">
+            <label for="fecha_pago" class="form-label">Fecha de pago</label>
+            <input type="date" name="fecha_pago" id="fecha_pago" class="form-control" required>
+        </div>
+
+        <!-- Forma de pago -->
+        <div class="mb-3">
+            <label for="forma_pago" class="form-label">Forma de pago</label>
+            <select name="forma_pago" id="forma_pago" class="form-control" required onchange="toggleDocumento()">
+                <option value="">-- Selecciona forma de pago --</option>
+                <option value="Efectivo">Efectivo</option>
+                <option value="Transferencia">Transferencia</option>
+            </select>
+        </div>
+
+        <!-- Número de Documento -->
+        <div class="mb-3" id="doc_num_div">
+            <label for="doc_num" class="form-label">Número de Documento</label>
+            <input type="text" name="doc_num" id="doc_num" class="form-control" placeholder="Ingrese el número de documento">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Registrar pago</button>
+    </form>
+</div>
+
+<script>
+function toggleDocumento() {
+    const forma = document.getElementById('forma_pago').value;
+    const docDiv = document.getElementById('doc_num_div');
+    const docInput = document.getElementById('doc_num');
+
+    if (forma === "Efectivo") {
+        docDiv.style.display = 'none';   // Ocultar campo
+        docInput.value = '';             // Limpiar valor
+        docInput.removeAttribute('required'); // Quitar requerido
+    } else if (forma === "Transferencia") {
+        docDiv.style.display = 'block';  // Mostrar campo
+        docInput.setAttribute('required', 'required'); // Obligatorio
+    } else {
+        // Si no selecciona nada
+        docDiv.style.display = 'block';
+        docInput.removeAttribute('required');
+    }
+}
+
+// Ejecutar al cargar la página
+window.onload = toggleDocumento;
+</script>

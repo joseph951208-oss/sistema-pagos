@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Consulta de Pagos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">💰 Sistema de Pagos</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        {% if user_role in ['admin', 'supersu'] %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('upload_files') }}">Subir Archivos</a>
+          </li>
+        {% endif %}
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('registro_pago') }}">Registrar Pago</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('registro_cliente') }}">Registrar Cliente</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="{{ url_for('consulta') }}">Consulta de Pagos</a>
+        </li>
+      </ul>
+      <span class="navbar-text me-3">
+        Usuario: {{ session['username'] }}
+      </span>
+      <a class="btn btn-danger" href="{{ url_for('logout') }}">Cerrar sesión</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-3">
+    <h2>📊 Consulta de Pagos</h2>
+
+    <!-- Filtros de búsqueda -->
+    <form method="GET" class="row g-3 mb-3">
+        <div class="col-md-5">
+            <label for="cliente" class="form-label">Buscar por Cliente</label>
+            <select name="cliente" id="cliente" class="form-select">
+                <option value="">-- Todos los Clientes --</option>
+                {% for c in clientes %}
+                    <option value="{{ c }}" {% if request.args.get('cliente') == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label for="documento" class="form-label">Buscar por Documento</label>
+            <input type="text" name="documento" id="documento" class="form-control"
+                   placeholder="Número de Documento" value="{{ request.args.get('documento','') }}">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-success w-100">Buscar</button>
+        </div>
+    </form>
+
+    <!-- Tabla de resultados -->
+    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+        <table class="table table-striped table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>Cliente</th>
+                    <th>Documento</th>
+                    <th>Fecha</th>
+                    <th>Forma de Pago</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if pagos %}
+                    {% for pago in pagos %}
+                        <tr>
+                            <td>{{ pago['Cliente'] }}</td>
+                            <td>{{ pago['Documento'] }}</td>
+                            <td>{{ pago['Fecha'] }}</td>
+                            <td>{{ pago['Forma'] }}</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center">No se encontraron pagos.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
