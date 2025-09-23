@@ -262,6 +262,13 @@ def registro_cliente():
                 df_clientes['IP'].str.lower().str.contains(termino)
             ]
 
+        elif accion == "eliminar":
+            cliente_id = int(request.form.get('id'))
+            if cliente_id in df_clientes['ID'].values:
+                df_clientes = df_clientes[df_clientes['ID'] != cliente_id]
+                df_clientes.to_excel(clientes_path, index=False)
+                mensaje = f"Cliente {cliente_id} eliminado ❌"
+
     clientes = df_clientes.to_dict(orient='records')
     return render_template('registro_cliente.html', clientes=clientes, mensaje=mensaje)
 
