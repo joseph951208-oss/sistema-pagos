@@ -48,64 +48,67 @@
         {% endfor %}
     {% endwith %}
 
-    <form method="POST">
-        <!-- Selección de Cliente -->
-        <div class="mb-3">
+    <!-- Formulario de registro de pago directo -->
+    <form method="POST" class="row g-3">
+        <input type="hidden" name="accion" value="registrar_pago">
+
+        <!-- Cliente con buscador -->
+        <div class="col-md-6">
             <label for="cliente" class="form-label">Cliente</label>
-            <select name="cliente" id="cliente" class="form-control" required>
-                <option value="">-- Selecciona un cliente --</option>
+            <input list="clientes" name="cliente" id="cliente" class="form-control" placeholder="Escriba el nombre o IP" required>
+            <datalist id="clientes">
                 {% for c in clientes %}
-                    <option value="{{ c }}">{{ c }}</option>
+                    <option value="{{ c }}">
                 {% endfor %}
-            </select>
+            </datalist>
         </div>
 
-        <!-- Fecha de pago -->
-        <div class="mb-3">
-            <label for="fecha_pago" class="form-label">Fecha de pago</label>
+        <!-- Fecha -->
+        <div class="col-md-3">
+            <label for="fecha_pago" class="form-label">Fecha de Pago</label>
             <input type="date" name="fecha_pago" id="fecha_pago" class="form-control" required>
         </div>
 
         <!-- Forma de pago -->
-        <div class="mb-3">
-            <label for="forma_pago" class="form-label">Forma de pago</label>
-            <select name="forma_pago" id="forma_pago" class="form-control" required onchange="toggleDocumento()">
-                <option value="">-- Selecciona forma de pago --</option>
+        <div class="col-md-4">
+            <label for="forma_pago" class="form-label">Forma de Pago</label>
+            <select name="forma_pago" id="forma_pago" class="form-control" required onchange="toggleDocumento(this)">
+                <option value="">Seleccione...</option>
                 <option value="Efectivo">Efectivo</option>
                 <option value="Transferencia">Transferencia</option>
             </select>
         </div>
 
-        <!-- Número de Documento -->
-        <div class="mb-3" id="doc_num_div">
-            <label for="doc_num" class="form-label">Número de Documento</label>
-            <input type="text" name="doc_num" id="doc_num" class="form-control" placeholder="Ingrese el número de documento">
+        <!-- Documento -->
+        <div class="col-md-4 doc-num-div" style="display:none;">
+            <label for="doc_num" class="form-label">Nro Documento</label>
+            <input type="text" name="doc_num" id="doc_num" class="form-control">
         </div>
 
-        <button type="submit" class="btn btn-primary">Registrar pago</button>
+        <div class="col-md-4 d-flex align-items-end">
+            <button type="submit" class="btn btn-success w-100">💰 Registrar Pago</button>
+        </div>
     </form>
 </div>
 
 <script>
-function toggleDocumento() {
-    const forma = document.getElementById('forma_pago').value;
-    const docDiv = document.getElementById('doc_num_div');
-    const docInput = document.getElementById('doc_num');
+function toggleDocumento(select) {
+    const docDiv = document.querySelector(".doc-num-div");
+    const docInput = docDiv.querySelector("input");
 
-    if (forma === "Efectivo") {
-        docDiv.style.display = 'none';   // Ocultar campo
-        docInput.value = '';             // Limpiar valor
-        docInput.removeAttribute('required'); // Quitar requerido
-    } else if (forma === "Transferencia") {
-        docDiv.style.display = 'block';  // Mostrar campo
-        docInput.setAttribute('required', 'required'); // Obligatorio
+    if (select.value === "Efectivo") {
+        docDiv.style.display = "none";
+        docInput.value = "";
+        docInput.removeAttribute("required");
+    } else if (select.value === "Transferencia") {
+        docDiv.style.display = "block";
+        docInput.setAttribute("required", "required");
     } else {
-        // Si no selecciona nada
-        docDiv.style.display = 'block';
-        docInput.removeAttribute('required');
+        docDiv.style.display = "none";
+        docInput.removeAttribute("required");
     }
 }
-
-// Ejecutar al cargar la página
-window.onload = toggleDocumento;
 </script>
+
+</body>
+</html>

@@ -5,10 +5,8 @@ import os
 import pandas as pd
 import json
 
-
 app = Flask(__name__)
 app.secret_key = 'clave-secreta-muy-segura'
-
 
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -17,8 +15,8 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # -------------------- Cargar usuarios desde JSON --------------------
 with open('usuarios.json', 'r') as f:
     USERS = json.load(f)
-# -------------------- Rutas --------------------
 
+# -------------------- Rutas --------------------
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -85,7 +83,7 @@ def registro_pago():
         df_clientes.columns = df_clientes.columns.str.strip().str.upper()
         nombre_col = [col for col in df_clientes.columns if 'NOMBRE' in col]
         if nombre_col:
-            clientes = df_clientes[nombre_col[0]].tolist()
+            clientes = df_clientes[nombre_col[0]].dropna().astype(str).tolist()
 
     # ---------------- Cargar documentos de movimientos ----------------
     movimientos_path = os.path.join(app.config['UPLOAD_FOLDER'], 'movimientos.xlsx')
@@ -271,10 +269,6 @@ def registro_cliente():
 
     clientes = df_clientes.to_dict(orient='records')
     return render_template('registro_cliente.html', clientes=clientes, mensaje=mensaje)
-
-@app.context_processor
-def inject_user_role():
-    return dict(user_role=session.get('role'))
 
 @app.context_processor
 def inject_user_role():
