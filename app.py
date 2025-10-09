@@ -1,20 +1,50 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from openpyxl import load_workbook
 from werkzeug.security import check_password_hash
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import pandas as pd
 import json
 
+
 app = Flask(__name__)
 app.secret_key = 'clave-secreta-muy-segura'
+
+# URL de PostgreSQL 
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://sistema_pagos_ohrc_user:LsMj7GgLXTPIW2C7rTvE3kfCjQz4j9OW@dpg-d3jh63t6ubrc73cr05ag-a.oregon-postgres.render.com/sistema_pagos_ohrc")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+class Usuario(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+    role = db.Column(db.String(20), nullable=False)
+
+class Cliente(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    cedula = db.Column(db.String(20), unique=True, nullable=False)
+    nombres = db.Column(db.String(100), nullable=False)
+    direccion = db.Column(db.String(200))
+    fecha_instalacion = db.Column(db.Date)
+    pagos = db.relationship('Pago', backref='cliente', lazy=True)
+
+class Pago(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    cliente_id = db.Column(db.Integer, db.ForeignKey('cliente.id'), nullable=False)
+    documento = db.Column(db.String(50))
+    fecha_pago = db.Column(db.Date, nullable=False)
+    forma_pago = db.Column(db.String(50), nullable=False)
 
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# -------------------- Cargar usuarios desde JSON --------------------
-with open('usuarios.json', 'r') as f:
-    USERS = json.load(f)
 
 # -------------------- Rutas --------------------
 @app.route('/', methods=['GET', 'POST'])
