@@ -47,21 +47,30 @@
     <!-- Formulario Buscar -->
     <form method="POST" class="mb-3 d-flex">
         <input type="hidden" name="accion" value="buscar">
-        <input type="text" name="buscar" class="form-control me-2" placeholder="Buscar por nombre o IP" required>
+        <input type="text" name="buscar" class="form-control me-2" placeholder="Buscar por nombre, cédula o IP" required>
         <button type="submit" class="btn btn-secondary">🔍 Buscar</button>
     </form>
 
-    <!-- Formulario Agregar -->
+      <!-- Formulario Agregar -->
     <form method="POST" class="mb-4">
         <input type="hidden" name="accion" value="agregar">
-        <div class="row">
-            <div class="col-md-5">
+        <div class="row g-2">
+            <div class="col-md-2">
+                <input type="text" name="cedula" class="form-control" placeholder="Cédula" required>
+            </div>
+            <div class="col-md-3">
                 <input type="text" name="nombre" class="form-control" placeholder="Nombre completo" required>
             </div>
-            <div class="col-md-5">
-                <input type="text" name="ip" class="form-control" placeholder="IP" required>
+            <div class="col-md-3">
+                <input type="text" name="direccion" class="form-control" placeholder="Dirección">
             </div>
             <div class="col-md-2">
+                <input type="date" name="fecha_instalacion" class="form-control" placeholder="Fecha de instalación">
+            </div>
+            <div class="col-md-2">
+                <input type="text" name="ip" class="form-control" placeholder="IP" required>
+            </div>
+            <div class="col-md-2 mt-2">
                 <button type="submit" class="btn btn-success w-100">➕ Agregar</button>
             </div>
         </div>
@@ -72,7 +81,10 @@
         <thead>
             <tr>
                 <th>ID</th>
+                <th>Cédula</th>
                 <th>Nombre</th>
+                <th>Dirección</th>
+                <th>Fecha Instalación</th>
                 <th>IP</th>
                 <th>Acciones</th>
             </tr>
@@ -80,12 +92,14 @@
         <tbody>
             {% for c in clientes %}
             <tr>
-                <!-- Formulario modificar -->
                 <form method="POST" class="d-flex">
-                    <input type="hidden" name="id" value="{{ c.ID }}">
-                    <td>{{ c.ID }}</td>
-                    <td><input type="text" name="nombre" class="form-control" value="{{ c.NOMBRE }}"></td>
-                    <td><input type="text" name="ip" class="form-control" value="{{ c.IP }}"></td>
+                    <input type="hidden" name="id" value="{{ c.id }}">
+                    <td>{{ c.id }}</td>
+                    <td><input type="text" name="cedula" class="form-control" value="{{ c.cedula }}"></td>
+                    <td><input type="text" name="nombre" class="form-control" value="{{ c.nombres }}"></td>
+                    <td><input type="text" name="direccion" class="form-control" value="{{ c.direccion }}"></td>
+                    <td><input type="date" name="fecha_instalacion" class="form-control" value="{{ c.fecha_instalacion }}"></td>
+                    <td><input type="text" name="ip" class="form-control" value="{{ c.ip }}"></td>
                     <td class="d-flex">
                         <button type="submit" name="accion" value="modificar" class="btn btn-primary btn-sm me-2">💾 Guardar</button>
                         <button type="submit" name="accion" value="eliminar" class="btn btn-danger btn-sm">❌ Eliminar</button>
