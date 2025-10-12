@@ -76,6 +76,7 @@
                 <option value="">Seleccione...</option>
                 <option value="Efectivo">Efectivo</option>
                 <option value="Transferencia">Transferencia</option>
+                <option value="Otros Bancos">Otros Bancos</option>
             </select>
         </div>
 
@@ -100,10 +101,16 @@ function toggleDocumento(select) {
         docDiv.style.display = "none";
         docInput.value = "";
         docInput.removeAttribute("required");
-    } else if (select.value === "Transferencia") {
+    } 
+    else if (select.value === "Transferencia") {
         docDiv.style.display = "block";
         docInput.setAttribute("required", "required");
-    } else {
+    } 
+    else if (select.value === "Otros Bancos") {
+        docDiv.style.display = "block";
+        docInput.removeAttribute("required"); // visible pero sin validación obligatoria
+    } 
+    else {
         docDiv.style.display = "none";
         docInput.removeAttribute("required");
     }
