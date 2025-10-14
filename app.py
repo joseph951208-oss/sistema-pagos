@@ -4,6 +4,7 @@ from werkzeug.security import check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import func
 import os
 import pandas as pd
 import json
@@ -56,34 +57,44 @@ def cargar_documentos():
         header_row = 6  # Fila donde está "Nro. Documento"
         col_idx = None
 
-        # Buscar columna
+        # Buscar columna sin importar mayúsculas, puntos o espacios
         for cell in ws[header_row]:
-            if cell.value and str(cell.value).strip().upper() == "NRO. DOCUMENTO":
+            if cell.value and "NRO" in str(cell.value).upper() and "DOCUMENTO" in str(cell.value).upper():
                 col_idx = cell.column
                 break
 
         if not col_idx:
-            print("⚠️ No se encontró la columna 'Nro. Documento'.")
+            print("⚠️ No se encontró la columna que contiene 'Nro. Documento'.")
             return []
 
         merged_ranges = ws.merged_cells.ranges
         for row in range(header_row + 1, ws.max_row + 1):
             cell = ws.cell(row=row, column=col_idx)
             val = cell.value
+
+            # Si la celda está vacía, verificar si pertenece a un rango combinado
             if not val:
                 for mrange in merged_ranges:
                     if cell.coordinate in mrange:
                         val = ws.cell(mrange.min_row, mrange.min_col).value
                         break
+
+            # Validar que el valor no esté vacío ni sea NaN
             if val and str(val).strip() not in ["", "NaN", "nan"]:
-                documentos.append(str(val).strip())
+                # Limpiar el valor (quita decimales tipo "12345.0" y espacios)
+                val_str = str(val).strip()
+                if val_str.endswith(".0"):
+                    val_str = val_str[:-2]
+                documentos.append(val_str)
+
+        print(f"✅ Documentos cargados: {len(documentos)} encontrados.")
 
     except Exception as e:
         print(f"❌ Error al cargar movimientos.xlsx: {e}")
         return []
 
-    print(f"✅ Documentos cargados: {len(documentos)} encontrados.")
     return documentos
+
 
 DOCUMENTOS_CARGADOS = []
 
@@ -161,7 +172,7 @@ def registro_pago():
         doc_num = request.form.get('doc_num', '').strip()  # Puede ser vacío si es efectivo
 
         # Validar cliente
-        cliente = Cliente.query.filter_by(nombres=cliente_nombre).first()
+        cliente = Cliente.query.filter(func.lower(func.trim(Cliente.nombres)) == cliente_nombre.lower().strip()).first()
         if not cliente:
             flash("Cliente no válido o no registrado.", "danger")
             return redirect(url_for('registro_pago'))

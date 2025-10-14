@@ -56,11 +56,11 @@
         <div class="col-md-6">
             <label for="cliente" class="form-label">Cliente</label>
             <input list="clientes" name="cliente" id="cliente" class="form-control" placeholder="Escriba el nombre o IP" required>
-            <datalist id="clientes">
+              <datalist id="clientes">
                 {% for c in clientes %}
                     <option value="{{ c }}">
                 {% endfor %}
-            </datalist>
+</datalist>
         </div>
 
         <!-- Fecha -->
