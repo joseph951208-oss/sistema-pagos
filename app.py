@@ -44,33 +44,45 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def cargar_documentos():
     documentos = []
-    movimientos_path = os.path.join(app.config['UPLOAD_FOLDER'], 'movimientos.xlsx')
-    if os.path.exists(movimientos_path):
-        wb = load_workbook(movimientos_path)
+    try:
+        movimientos_path = os.path.join(app.config['UPLOAD_FOLDER'], 'movimientos.xlsx')
+        if not os.path.exists(movimientos_path):
+            print("⚠️ No se encontró el archivo movimientos.xlsx — se omite la carga.")
+            return []
+
+        wb = load_workbook(movimientos_path, data_only=True)
         ws = wb.active
-        header_row = 6  # fila donde está "Nro. Documento"
+        header_row = 6  # Fila donde está "Nro. Documento"
         col_idx = None
 
-        # Buscar la columna de "Nro. Documento"
+        # Buscar columna
         for cell in ws[header_row]:
             if cell.value and str(cell.value).strip().upper() == "NRO. DOCUMENTO":
                 col_idx = cell.column
                 break
 
-        if col_idx:
-            merged_ranges = ws.merged_cells.ranges
-            for row in range(header_row + 1, ws.max_row + 1):
-                cell = ws.cell(row=row, column=col_idx)
-                val = cell.value
-                if not val:
-                    for mrange in merged_ranges:
-                        if cell.coordinate in mrange:
-                            val = ws.cell(mrange.min_row, mrange.min_col).value
-                            break
-                if val and str(val).strip() not in ["", "NaN", "nan"]:
-                    documentos.append(str(val).strip())
-    return documentos
+        if not col_idx:
+            print("⚠️ No se encontró la columna 'Nro. Documento'.")
+            return []
 
+        merged_ranges = ws.merged_cells.ranges
+        for row in range(header_row + 1, ws.max_row + 1):
+            cell = ws.cell(row=row, column=col_idx)
+            val = cell.value
+            if not val:
+                for mrange in merged_ranges:
+                    if cell.coordinate in mrange:
+                        val = ws.cell(mrange.min_row, mrange.min_col).value
+                        break
+            if val and str(val).strip() not in ["", "NaN", "nan"]:
+                documentos.append(str(val).strip())
+
+    except Exception as e:
+        print(f"❌ Error al cargar movimientos.xlsx: {e}")
+        return []
+
+    print(f"✅ Documentos cargados: {len(documentos)} encontrados.")
+    return documentos
 # Cargar usuarios desde JSON
 with open("usuarios.json", "r") as f:
     USERS = json.load(f)
