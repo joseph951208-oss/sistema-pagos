@@ -42,12 +42,6 @@ UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-DOCUMENTOS_CARGADOS = []
-
-@app.before_first_request
-def precargar_documentos():
-    global DOCUMENTOS_CARGADOS
-    DOCUMENTOS_CARGADOS = cargar_documentos()
 
 def cargar_documentos():
     documentos = []
@@ -90,6 +84,13 @@ def cargar_documentos():
 
     print(f"✅ Documentos cargados: {len(documentos)} encontrados.")
     return documentos
+
+DOCUMENTOS_CARGADOS = []
+
+with app.app_context():
+    DOCUMENTOS_CARGADOS = cargar_documentos()
+
+
 # Cargar usuarios desde JSON
 with open("usuarios.json", "r") as f:
     USERS = json.load(f)
