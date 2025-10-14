@@ -42,6 +42,13 @@ UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+DOCUMENTOS_CARGADOS = []
+
+@app.before_first_request
+def precargar_documentos():
+    global DOCUMENTOS_CARGADOS
+    DOCUMENTOS_CARGADOS = cargar_documentos()
+
 def cargar_documentos():
     documentos = []
     try:
@@ -143,14 +150,14 @@ def registro_pago():
     clientes_db = Cliente.query.all()
     clientes = [c.nombres for c in clientes_db]  # Lista de nombres de clientes
 
-    # Cargar documentos desde movimientos.xlsx
-    documentos = cargar_documentos()
+    # 🔹 Cargar los documentos precargados (no bloquea el servidor)
+    documentos = DOCUMENTOS_CARGADOS
 
     if request.method == 'POST':
-        cliente_nombre = request.form.get('cliente', '').strip()
+        cliente_nombre = request.form.get('cliente').strip()
         fecha_pago = request.form.get('fecha_pago')
-        forma_pago = request.form.get('forma_pago', '').strip()
-        doc_num = request.form.get('doc_num', '').strip()
+        forma_pago = request.form.get('forma_pago')
+        doc_num = request.form.get('doc_num', '').strip()  # Puede ser vacío si es efectivo
 
         # Validar cliente
         cliente = Cliente.query.filter_by(nombres=cliente_nombre).first()
@@ -158,31 +165,26 @@ def registro_pago():
             flash("Cliente no válido o no registrado.", "danger")
             return redirect(url_for('registro_pago'))
 
-        # --- Validaciones según la forma de pago ---
+        # Validar documento si es transferencia
         if forma_pago.upper() == "TRANSFERENCIA":
-            # Obligatorio documento y debe existir en movimientos.xlsx
             if not doc_num:
                 flash("Debe ingresar un número de documento para transferencia.", "danger")
                 return redirect(url_for('registro_pago'))
-
             if doc_num not in documentos:
                 flash(f"El número de documento {doc_num} no se encuentra en movimientos.xlsx.", "danger")
                 return redirect(url_for('registro_pago'))
 
-        elif forma_pago.upper() == "EFECTIVO":
-            # No necesita número de documento
-            doc_num = ""
+        # Registrar otros bancos (no valida documento)
+        if forma_pago.upper() == "OTROS BANCOS":
+            if not doc_num:
+                doc_num = ""  # opcional
+            # No valida en documentos, pasa directamente
 
-        elif forma_pago.upper() == "OTROS BANCOS":
-            # Puede tener documento, pero sin validación
-            pass
-
-        # Validar si el pago ya fue registrado (solo si hay documento)
-        if doc_num:
-            pago_existente = Pago.query.filter_by(documento=doc_num).first()
-            if pago_existente:
-                flash(f"El documento {doc_num} ya fue registrado anteriormente.", "warning")
-                return redirect(url_for('registro_pago'))
+        # Validar pagos existentes
+        pago_existente = Pago.query.filter_by(documento=doc_num).first()
+        if pago_existente and doc_num != "":
+            flash(f"El documento {doc_num} ya fue registrado.", "warning")
+            return redirect(url_for('registro_pago'))
 
         # Registrar pago
         try:
@@ -202,7 +204,6 @@ def registro_pago():
         return redirect(url_for('registro_pago'))
 
     return render_template('registro_pago.html', clientes=clientes)
-
 
 # Consulta (lector y admin)
 @app.route('/consulta', methods=['GET'])
