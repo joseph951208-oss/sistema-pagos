@@ -3,25 +3,24 @@ from openpyxl import load_workbook
 from werkzeug.security import check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func
 import os
-import pandas as pd
 import json
-
 
 app = Flask(__name__)
 app.secret_key = 'clave-secreta-muy-segura'
 
 # URL de PostgreSQL 
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://sistema_pagos_ohrc_user:LsMj7GgLXTPIW2C7rTvE3kfCjQz4j9OW@dpg-d3jh63t6ubrc73cr05ag-a.oregon-postgres.render.com/sistema_pagos_ohrc")
-
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql://sistema_pagos_ohrc_user:LsMj7GgLXTPIW2C7rTvE3kfCjQz4j9OW@dpg-d3jh63t6ubrc73cr05ag-a.oregon-postgres.render.com/sistema_pagos_ohrc"
+)
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-
+# -------------------- Modelos --------------------
 class Cliente(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     cedula = db.Column(db.String(20), unique=True, nullable=False)
@@ -38,18 +37,17 @@ class Pago(db.Model):
     fecha_pago = db.Column(db.Date, nullable=False)
     forma_pago = db.Column(db.String(50), nullable=False)
 
-
+# -------------------- Configuración de uploads --------------------
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-
+# -------------------- Función para cargar documentos --------------------
 def cargar_documentos():
     documentos = []
     try:
         movimientos_path = os.path.join(app.config['UPLOAD_FOLDER'], 'movimientos.xlsx')
         if not os.path.exists(movimientos_path):
-            print("⚠️ No se encontró el archivo movimientos.xlsx — se omite la carga.")
             return []
 
         wb = load_workbook(movimientos_path, data_only=True)
@@ -64,7 +62,6 @@ def cargar_documentos():
                 break
 
         if not col_idx:
-            print("⚠️ No se encontró la columna que contiene 'Nro. Documento'.")
             return []
 
         merged_ranges = ws.merged_cells.ranges
@@ -81,13 +78,10 @@ def cargar_documentos():
 
             # Validar que el valor no esté vacío ni sea NaN
             if val and str(val).strip() not in ["", "NaN", "nan"]:
-                # Limpiar el valor (quita decimales tipo "12345.0" y espacios)
                 val_str = str(val).strip()
                 if val_str.endswith(".0"):
                     val_str = val_str[:-2]
                 documentos.append(val_str)
-
-        print(f"✅ Documentos cargados: {len(documentos)} encontrados.")
 
     except Exception as e:
         print(f"❌ Error al cargar movimientos.xlsx: {e}")
@@ -95,14 +89,12 @@ def cargar_documentos():
 
     return documentos
 
-
+# -------------------- Documentos precargados --------------------
 DOCUMENTOS_CARGADOS = []
-
 with app.app_context():
     DOCUMENTOS_CARGADOS = cargar_documentos()
 
-
-# Cargar usuarios desde JSON
+# -------------------- Cargar usuarios desde JSON --------------------
 with open("usuarios.json", "r") as f:
     USERS = json.load(f)
 
@@ -115,7 +107,6 @@ def login():
 
         user = USERS.get(username)
 
-        # Verificar hash de contraseña
         if user and check_password_hash(user['password_hash'], password):
             session['username'] = username
             session['role'] = user['role']
@@ -129,12 +120,14 @@ def login():
 
     return render_template('login.html')
 
-# Subir archivos (solo admin)
+# -------------------- Subir archivos --------------------
 @app.route('/subir', methods=['GET', 'POST'])
 def upload_files():
     if 'username' not in session or session.get('role') != 'admin':
         flash('No tienes permisos para acceder a esta página.', 'danger')
         return redirect(url_for('login'))
+
+    global DOCUMENTOS_CARGADOS
 
     if request.method == 'POST':
         movimientos_file = request.files.get('movimientos')
@@ -143,9 +136,11 @@ def upload_files():
             flash('Debes seleccionar un archivo de movimientos.', 'danger')
             return redirect(url_for('upload_files'))
 
-        # Guardar el archivo en la carpeta uploads
         movimientos_path = os.path.join(app.config['UPLOAD_FOLDER'], 'movimientos.xlsx')
         movimientos_file.save(movimientos_path)
+
+        # 🔹 Cargar documentos y eliminar duplicados
+        DOCUMENTOS_CARGADOS = sorted(list(set(cargar_documentos())))
 
         flash('Archivo de movimientos cargado exitosamente ✅', 'success')
         return redirect(url_for('upload_files'))
@@ -158,26 +153,22 @@ def registro_pago():
     if 'username' not in session:
         return redirect(url_for('login'))
 
-    # Obtener lista de clientes para el datalist
     clientes_db = Cliente.query.all()
-    clientes = [c.nombres for c in clientes_db]  # Lista de nombres de clientes
+    clientes = [c.nombres for c in clientes_db]
 
-    # 🔹 Cargar los documentos precargados (no bloquea el servidor)
-    documentos = DOCUMENTOS_CARGADOS
+    documentos = sorted(list(set(DOCUMENTOS_CARGADOS)))  # 🔹 Únicos y ordenados
 
     if request.method == 'POST':
-        cliente_nombre = request.form.get('cliente').strip()
+        cliente_nombre = request.form.get('cliente', '').strip()
         fecha_pago = request.form.get('fecha_pago')
         forma_pago = request.form.get('forma_pago')
-        doc_num = request.form.get('doc_num', '').strip()  # Puede ser vacío si es efectivo
+        doc_num = request.form.get('doc_num', '').strip()
 
-        # Validar cliente
         cliente = Cliente.query.filter(func.lower(func.trim(Cliente.nombres)) == cliente_nombre.lower().strip()).first()
         if not cliente:
             flash("Cliente no válido o no registrado.", "danger")
             return redirect(url_for('registro_pago'))
 
-        # Validar documento si es transferencia
         if forma_pago.upper() == "TRANSFERENCIA":
             if not doc_num:
                 flash("Debe ingresar un número de documento para transferencia.", "danger")
@@ -186,19 +177,14 @@ def registro_pago():
                 flash(f"El número de documento {doc_num} no se encuentra en movimientos.xlsx.", "danger")
                 return redirect(url_for('registro_pago'))
 
-        # Registrar otros bancos (no valida documento)
-        if forma_pago.upper() == "OTROS BANCOS":
-            if not doc_num:
-                doc_num = ""  # opcional
-            # No valida en documentos, pasa directamente
+        if forma_pago.upper() == "OTROS BANCOS" and not doc_num:
+            doc_num = ""
 
-        # Validar pagos existentes
         pago_existente = Pago.query.filter_by(documento=doc_num).first()
         if pago_existente and doc_num != "":
             flash(f"El documento {doc_num} ya fue registrado.", "warning")
             return redirect(url_for('registro_pago'))
 
-        # Registrar pago
         try:
             nuevo_pago = Pago(
                 cliente_id=cliente.id,
@@ -215,20 +201,18 @@ def registro_pago():
 
         return redirect(url_for('registro_pago'))
 
-    return render_template('registro_pago.html', clientes=clientes)
+    return render_template('registro_pago.html', clientes=clientes, documentos=documentos)
 
-# Consulta (lector y admin)
+# -------------------- Consulta --------------------
 @app.route('/consulta', methods=['GET'])
 def consulta():
     if 'username' not in session:
         return redirect(url_for('login'))
 
-    # Obtener parámetros de búsqueda
     cedula = request.args.get('cedula', '').strip()
     cliente_nombre = request.args.get('cliente', '').strip()
     documento = request.args.get('documento', '').strip()
 
-    # Construir query base con JOIN a clientes
     query = db.session.query(
         Cliente.cedula.label('Cedula'),
         Cliente.nombres.label('Cliente'),
@@ -237,7 +221,6 @@ def consulta():
         Pago.forma_pago.label('Forma')
     ).join(Pago, Pago.cliente_id == Cliente.id)
 
-    # Aplicar filtros si vienen en GET
     if cedula:
         query = query.filter(Cliente.cedula.ilike(f"%{cedula}%"))
     if cliente_nombre:
@@ -247,15 +230,18 @@ def consulta():
 
     pagos = query.order_by(Pago.fecha_pago.desc()).all()
 
-    # Convertir resultados a lista de diccionarios para Jinja
-    pagos_lista = [dict(Cedula=p.Cedula, Cliente=p.Cliente, Documento=p.Documento,
-                        Fecha=p.Fecha.strftime("%Y-%m-%d"), Forma=p.Forma) for p in pagos]
+    pagos_lista = [dict(
+        Cedula=p.Cedula,
+        Cliente=p.Cliente,
+        Documento=p.Documento,
+        Fecha=p.Fecha.strftime("%Y-%m-%d"),
+        Forma=p.Forma
+    ) for p in pagos]
 
-    # Obtener lista de clientes para el filtro desplegable
     clientes = [c.nombres for c in Cliente.query.order_by(Cliente.nombres).all()]
-
     return render_template('consulta.html', pagos=pagos_lista, clientes=clientes)
 
+# -------------------- Registro de Clientes --------------------
 @app.route('/registro_cliente', methods=['GET', 'POST'])
 def registro_cliente():
     if 'username' not in session:
@@ -274,7 +260,6 @@ def registro_cliente():
             ip = request.form.get('ip').strip()
 
             if cedula and nombre:
-                # Verificar si ya existe la cédula
                 if Cliente.query.filter_by(cedula=cedula).first():
                     mensaje = f"❌ Cliente con cédula {cedula} ya existe."
                 else:
@@ -330,20 +315,15 @@ def registro_cliente():
             ).all()
             return render_template('registro_cliente.html', clientes=clientes, mensaje=mensaje)
 
-    # Mostrar todos los clientes si no es búsqueda
     clientes = Cliente.query.all()
     return render_template('registro_cliente.html', clientes=clientes, mensaje=mensaje)
 
-    # Cargar todos los clientes si no es búsqueda
-    clientes = Cliente.query.all()
-    return render_template('registro_cliente.html', clientes=clientes, mensaje=mensaje)
-
-
+# -------------------- Context Processor --------------------
 @app.context_processor
 def inject_user_role():
     return dict(user_role=session.get('role'))
 
-# Logout
+# -------------------- Logout --------------------
 @app.route('/logout')
 def logout():
     session.clear()
